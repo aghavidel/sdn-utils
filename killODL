@@ -1,0 +1,29 @@
+#!/bin/bash
+
+# Check if user is root
+if [[ $(id -u) -ne 0 ]]; then
+	echo "ODL needs root previlage."
+	exit 1
+fi
+
+odl_path=~/ODL/karaf-0.7.3/bin
+NOT_RUNNING="Not Running ..."
+cd $odl_path
+
+status="$(sudo ./status | tail -1)"
+if [[ "$status" == "$NOT_RUNNING" ]]; then
+	echo "ODL is not running."
+else
+	echo "stopping ODL ..."
+	sudo ./stop
+
+	while true; do
+		status="$(sudo ./status | tail -1)"
+		if [[ "$status" == "$NOT_RUNNING" ]]; then
+			echo "ODL is offline."
+			break
+		fi
+		sudo ./stop
+		sleep 1
+	done
+fi

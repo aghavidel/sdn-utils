@@ -1,0 +1,73 @@
+#!/bin/bash
+
+# Check if user is root
+if [[ $(id -u) -ne 0 ]]; then
+	echo "ODL needs root previlage."
+	exit 1
+fi
+
+odl_path=~/ODL/karaf-0.7.3/bin
+cd $odl_path
+
+# ODL is fully active, if port 6633 is occupied by Java
+
+status="$(sudo ./status | tail -1)"
+NOT_RUNNING="Not Running ..."
+RUNNING="Running ..."
+
+if [[ "$status" == "$NOT_RUNNING" ]]; then
+	echo "Starting ODL, please wait ..."
+
+	while true; do
+		./start
+
+		port_run="$(sudo netstat -tulpn | awk '/6633/&&/java/')"
+
+		if [[ ${#port_run} -ne 0 ]]; then
+			echo "port 6633 is active ..."
+			break
+		fi
+
+		sleep 1
+	done
+
+	echo "ODL is ready."
+else
+	while true; do
+		echo "ODL is already active, terminate? (y/n)"
+		read -p " " yn
+		case $yn in
+			[Yy]* ) break;;
+			[Nn]* ) echo "Canceled ..."; exit 1;;
+		esac
+	done
+
+	echo "Stopping ODL, please wait ..."
+
+	while true; do
+		./stop
+		status="$(sudo ./status | tail -1)"
+
+		if [[ "$status" == "$NOT_RUNNING" ]]; then
+			break
+		fi
+
+		sleep 1
+	done
+
+	echo "Starting ODL, please wait ..."
+
+	while true; do
+		./start
+		port_run="$(sudo netstat -tulpn | awk '/6633/&&/java/')"
+
+		if [[ ${#port_run} -ne 0 ]]; then
+			echo "port 6633 is active ..."
+			break
+		fi
+
+		sleep 1
+	done
+
+	echo "ODL is ready."
+fi
